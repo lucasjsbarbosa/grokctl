@@ -1,0 +1,17 @@
+# grokctl
+
+> Unofficial command-line interface for the Grok Bot desktop app (Windows). Lets terminal AI agents such as Claude Code, Codex, OpenCode, and Maestri multi-agent teams send tasks to Grok bots and read their replies.
+
+Grok Bot has no official CLI or API. grokctl restarts the app with the Chrome DevTools port on 127.0.0.1 and drives its UI: it types into the composer, clicks Send, and reads the transcript.
+
+## Usage
+
+- `grokctl bots`: list Grok bots
+- `grokctl ask --bot <name> "<task>"`: send a task and wait for the reply
+- `grokctl ask --no-wait ...`, `grokctl state`, `grokctl read [n]`: long-running tasks
+- Setup: `npm install`, then `scripts/start-grok-bot.ps1`
+
+## Docs
+
+- [README](README.md): install, usage, security, FAQ
+- [Maestri role example](examples/maestri-role.md)

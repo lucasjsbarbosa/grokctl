@@ -1,0 +1,33 @@
+{
+  "name": "grokctl",
+  "version": "0.1.0",
+  "description": "Unofficial CLI for the Grok Bot desktop app: send tasks to Grok bots from Claude Code, Codex, OpenCode or Maestri agent teams via the Chrome DevTools Protocol",
+  "main": "src/grokctl.js",
+  "bin": {
+    "grokctl": "src/grokctl.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "grok",
+    "grok-bot",
+    "xai",
+    "cli",
+    "claude-code",
+    "codex",
+    "opencode",
+    "maestri",
+    "multi-agent",
+    "ai-agents",
+    "agent-orchestration",
+    "chrome-devtools-protocol",
+    "electron",
+    "automation",
+    "wsl"
+  ]
+}
