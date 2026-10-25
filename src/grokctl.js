@@ -72,7 +72,9 @@ async function useBot(c, name) {
 
 async function messages(c) { return c.evaluate(JS.messages); }
 
-async function send(c, text) {
+async function send(c, text, waitS = 180) {
+  // the composer is disabled while the bot is still answering: wait for it instead of failing
+  for (const end = Date.now() + waitS * 1000; Date.now() < end && (await c.evaluate(JS.busy)); ) await sleep(2000);
   const ok = await c.evaluate(`(() => { const f = document.querySelector(".sand-prompt-field"); if (!f) return false; f.focus(); return true; })()`);
   if (!ok) throw new Error('prompt field not found');
   await c.send('Input.insertText', { text });
