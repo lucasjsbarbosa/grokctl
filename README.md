@@ -51,6 +51,7 @@ If you open Grok Bot normally (Start menu or desktop shortcut), the port is not 
 ```bash
 grokctl bots                              # list bots (* = active)
 grokctl use "Research"                    # switch the active bot
+grokctl create "Research"                 # create a new bot
 grokctl ask "Summarize today's HN front page"          # send and wait for the reply
 grokctl ask --bot "Research" --timeout 900 "..."       # target a bot, wait up to 15 min
 grokctl ask --bot "Research" --no-wait "..."           # fire and forget
@@ -60,6 +61,10 @@ grokctl eval 'document.title'             # raw JS in the app (debugging)
 ```
 
 `ask` exits with code `2` on timeout; the bot keeps working, so check back with `grokctl read`.
+
+`ask` finds the reply by anchoring on the message it just sent, so it keeps working when the transcript only renders the last few messages and while the Grok Bot window is minimized.
+
+If Node is not on the Windows `PATH` (for example a portable install), point the WSL launcher at it with `GROKCTL_NODE=/mnt/c/Users/<you>/tools/node/node.exe`.
 
 Set `GROKCTL_PORT` to use a port other than `9333`, and pass the same `-Port` to `start-grok-bot.ps1`.
 
@@ -77,6 +82,8 @@ While the DevTools port is open, **any program running on your PC can fully cont
 | --- | --- |
 | `debug port 9333 not reachable` | Grok Bot was opened without the flag. Run `scripts\start-grok-bot.ps1`. |
 | `send button not found` | The UI changed. Open an issue with your Grok Bot version. |
+| `node.exe: not found` from WSL | Install Node on Windows, or set `GROKCTL_NODE` to the full path of `node.exe`. |
+| `UtilAcceptVsock ... accept4 failed` from WSL | WSL interop is stuck in that shell. Open a new terminal or run `wsl --shutdown` from Windows. |
 | `ask` always times out | Check `grokctl state`. If it stays `busy`, the state selectors in `src/grokctl.js` need updating. |
 
 Tested with Grok Bot 0.75.5.
@@ -104,7 +111,7 @@ It is tested only on Windows (natively and from WSL2). The approach should work 
 
 1. Clone no disco do Windows e rode `npm install`.
 2. Abra o Grok Bot com a porta de depuração: `powershell -ExecutionPolicy Bypass -File scripts\start-grok-bot.ps1`.
-3. Use: `grokctl bots`, `grokctl ask --bot "Nome" "tarefa"`, `grokctl read`.
+3. Use: `grokctl bots`, `grokctl create "Nome"`, `grokctl ask --bot "Nome" "tarefa"`, `grokctl read`.
 
 Atenção: o projeto não é oficial, pode quebrar quando o app atualizar, e enquanto a porta estiver aberta qualquer programa do PC consegue controlar o Grok Bot. Leia a seção **Security** acima.
 

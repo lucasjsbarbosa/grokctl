@@ -1,6 +1,6 @@
 {
   "name": "grokctl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Unofficial CLI for the Grok Bot desktop app: send tasks to Grok bots from Claude Code, Codex, OpenCode or Maestri agent teams via the Chrome DevTools Protocol",
   "main": "src/grokctl.js",
   "bin": {

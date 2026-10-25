@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # grokctl launcher for WSL / Git Bash. Runs the client with Windows node.exe,
 # because Grok Bot's debug port is only reachable from the Windows host.
+# Set GROKCTL_NODE to a node.exe path if Node is not on the Windows PATH
+# (e.g. a portable install: /mnt/c/Users/<you>/tools/node/node.exe).
 set -euo pipefail
 DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 if command -v wslpath >/dev/null 2>&1; then
-  exec node.exe "$(wslpath -w "$DIR/src/grokctl.js")" "$@"
+  exec "${GROKCTL_NODE:-node.exe}" "$(wslpath -w "$DIR/src/grokctl.js")" "$@"
 else
-  exec node "$DIR/src/grokctl.js" "$@"
+  exec "${GROKCTL_NODE:-node}" "$DIR/src/grokctl.js" "$@"
 fi

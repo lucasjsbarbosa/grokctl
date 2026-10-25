@@ -2,6 +2,7 @@
 // grokctl — drive the Grok Bot desktop app over the Chrome DevTools Protocol.
 //   grokctl bots                     list bots (* = active)
 //   grokctl use <name>               switch to a bot
+//   grokctl create <name>            create a new bot
 //   grokctl ask [--bot <name>] [--no-wait] [--timeout <s>] <message>
 //   grokctl read [n]                 last n transcript messages (default 5)
 //   grokctl state                    busy/idle of the active bot
@@ -13,9 +14,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const JS = {
   bots: `[...document.querySelectorAll("button[data-agent-id]")].map(b => ({
     id: b.dataset.agentId, active: b.dataset.active === "true",
-    name: (b.getAttribute("aria-label") || b.innerText).split(",")[0].trim() }))`,
+    name: (b.getAttribute("aria-label") || b.innerText || b.textContent).split(",")[0].trim() }))`,
+  // innerText is empty while the window is minimized, so fall back to textContent
   messages: `[...document.querySelectorAll(".sand-message[data-role]")].map(m => ({
-    role: m.dataset.role, text: m.innerText.trim() }))`,
+    role: m.dataset.role, text: (m.innerText || m.textContent).trim() }))`,
   busy: `(() => {
     const states = [...document.querySelectorAll("[data-grok-state]")].map(e => e.dataset.grokState);
     const stop = [...document.querySelectorAll("button")].some(b => /^(Stop|Parar|Interromper|Detener)/i.test(b.getAttribute("aria-label") || ""));
@@ -53,21 +55,48 @@ async function send(c, text) {
   if (!clicked) throw new Error('send button not found or disabled');
 }
 
-async function waitReply(c, beforeCount, timeoutS) {
+// The transcript is virtualized (only the last few messages are in the DOM), so counting
+// messages before/after sending is unreliable. Anchor on our own message instead.
+const norm = t => t.replace(/\s+/g, ' ').trim();
+function after(msgs, sent) {
+  const key = norm(sent).slice(0, 80);
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role === 'user' && norm(msgs[i].text).includes(key)) return msgs.slice(i + 1).filter(m => m.role !== 'user');
+  }
+  return [];
+}
+
+async function createBot(c, name) {
+  const opened = await c.evaluate(`(() => {
+    const b = [...document.querySelectorAll("button")].find(x => /^(New Bot|Novo Bot)$/i.test(x.getAttribute("aria-label") || ""));
+    if (!b) return false; b.click(); return true; })()`);
+  if (!opened) throw new Error('"New Bot" button not found');
+  await sleep(1500);
+  const r = await c.evaluate(`(() => {
+    const d = document.querySelector('[role="dialog"]'); if (!d) return 'dialog not found';
+    const i = d.querySelector('input[placeholder]'); if (!i) return 'name field not found';
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(name)});
+    i.dispatchEvent(new Event('input', { bubbles: true }));
+    const ok = [...d.querySelectorAll('button')].find(x => /^(Create|Criar)$/i.test(x.textContent.trim()));
+    if (!ok || ok.disabled) return 'create button not found or disabled';
+    ok.click(); return 'ok'; })()`);
+  if (r !== 'ok') throw new Error(r);
+  await sleep(1500);
+}
+
+async function waitReply(c, sent, timeoutS) {
   const deadline = Date.now() + timeoutS * 1000;
   let last = '', stableSince = 0;
   while (Date.now() < deadline) {
     await sleep(1500);
-    const msgs = await messages(c);
-    const fresh = msgs.slice(beforeCount).filter(m => m.role !== 'user');
+    const fresh = after(await messages(c), sent);
     const busy = await c.evaluate(JS.busy);
     const snapshot = JSON.stringify(fresh);
     if (snapshot !== last) { last = snapshot; stableSince = Date.now(); }
     // done when there is a reply, the bot is idle, and the transcript stopped changing for 4s
     if (fresh.length && !busy && Date.now() - stableSince > 4000) return fresh;
   }
-  const msgs = await messages(c);
-  return { timeout: true, partial: msgs.slice(beforeCount).filter(m => m.role !== 'user') };
+  return { timeout: true, partial: after(await messages(c), sent) };
 }
 
 function fmt(msgs) {
@@ -96,6 +125,11 @@ async function main() {
       case 'use':
         console.log(`active: ${(await useBot(c, rest.join(' '))).name}`);
         break;
+      case 'create':
+        if (!rest.length) throw new Error('usage: grokctl create <name>');
+        await createBot(c, rest.join(' '));
+        console.log(`created: ${rest.join(' ')}`);
+        break;
       case 'state':
         console.log((await c.evaluate(JS.busy)) ? 'busy' : 'idle');
         break;
@@ -107,10 +141,9 @@ async function main() {
       case 'ask': {
         const text = rest.join(' ');
         if (!text) throw new Error('usage: grokctl ask [--bot name] <message>');
-        const before = (await messages(c)).length;
         await send(c, text);
         if (!opt.wait) { console.log('sent'); break; }
-        const r = await waitReply(c, before, opt.timeout);
+        const r = await waitReply(c, text, opt.timeout);
         if (r.timeout) { console.log(`(timeout after ${opt.timeout}s — bot still working; use "grokctl read")\n` + fmt(r.partial)); process.exitCode = 2; }
         else console.log(fmt(r));
         break;
@@ -121,7 +154,7 @@ async function main() {
         break;
       }
       default:
-        console.log('usage: grokctl bots | use <name> | ask [--bot name] [--no-wait] [--timeout s] <msg> | read [n] | state | eval <js>');
+        console.log('usage: grokctl bots | use <name> | create <name> | ask [--bot name] [--no-wait] [--timeout s] <msg> | read [n] | state | eval <js>');
     }
   } finally {
     c.close();

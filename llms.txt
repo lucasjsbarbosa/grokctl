@@ -7,6 +7,7 @@ Grok Bot has no official CLI or API. grokctl restarts the app with the Chrome De
 ## Usage
 
 - `grokctl bots`: list Grok bots
+- `grokctl create <name>`: create a bot
 - `grokctl ask --bot <name> "<task>"`: send a task and wait for the reply
 - `grokctl ask --no-wait ...`, `grokctl state`, `grokctl read [n]`: long-running tasks
 - Setup: `npm install`, then `scripts/start-grok-bot.ps1`
