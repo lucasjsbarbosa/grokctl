@@ -33,6 +33,7 @@ async function bots(c) { return c.evaluate(JS.bots); }
 const SCROLL = pos => `(() => { const b = document.querySelector("button[data-agent-id]");
   const v = b && b.closest(".ui-scroll-area__viewport"); if (!v) return false;
   ${pos === 'top' ? 'v.scrollTop = 0' : 'v.scrollTop += v.clientHeight * 0.4'};
+  v.dispatchEvent(new Event("scroll", { bubbles: true })); // the list only re-renders on a scroll event
   return v.scrollTop + v.clientHeight < v.scrollHeight - 2; })()`;
 
 async function allBots(c) {
@@ -56,7 +57,7 @@ async function findBot(c, name) {
   for (let i = 0; i < 50; i++) {
     bot = pick(await bots(c));
     if (bot) return { bot, scrolled: true };
-    const more = await c.evaluate(SCROLL('down')); await sleep(400);
+    const more = await c.evaluate(SCROLL('down')); await sleep(600);
     if (!more) { bot = pick(await bots(c)); if (bot) return { bot, scrolled: true }; break; }
   }
   return { list: await allBots(c) };
