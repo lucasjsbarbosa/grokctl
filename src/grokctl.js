@@ -27,10 +27,41 @@ const JS = {
 
 async function bots(c) { return c.evaluate(JS.bots); }
 
-async function useBot(c, name) {
-  const list = await bots(c);
+// The sidebar only renders the bots near the visible area, so scroll through it to see them all.
+const SCROLL = pos => `(() => { const b = document.querySelector("button[data-agent-id]");
+  const v = b && b.closest(".ui-scroll-area__viewport"); if (!v) return false;
+  ${pos === 'top' ? 'v.scrollTop = 0' : 'v.scrollTop += v.clientHeight * 0.8'};
+  return v.scrollTop + v.clientHeight < v.scrollHeight - 2; })()`;
+
+async function allBots(c) {
+  const seen = new Map();
+  await c.evaluate(SCROLL('top')); await sleep(300);
+  for (let i = 0; i < 50; i++) {
+    for (const b of await bots(c)) if (!seen.has(b.id)) seen.set(b.id, b);
+    const more = await c.evaluate(SCROLL('down')); await sleep(300);
+    if (!more) { for (const b of await bots(c)) if (!seen.has(b.id)) seen.set(b.id, b); break; }
+  }
+  await c.evaluate(SCROLL('top'));
+  return [...seen.values()];
+}
+
+async function findBot(c, name) {
   const want = name.toLowerCase();
-  const bot = list.find(b => b.name.toLowerCase() === want) || list.find(b => b.name.toLowerCase().includes(want));
+  const pick = list => list.find(b => b.name.toLowerCase() === want) || list.find(b => b.name.toLowerCase().includes(want));
+  let bot = pick(await bots(c));
+  if (bot) return { bot };
+  await c.evaluate(SCROLL('top')); await sleep(300);
+  for (let i = 0; i < 50; i++) {
+    bot = pick(await bots(c));
+    if (bot) return { bot, scrolled: true };
+    const more = await c.evaluate(SCROLL('down')); await sleep(400);
+    if (!more) { bot = pick(await bots(c)); if (bot) return { bot, scrolled: true }; break; }
+  }
+  return { list: await allBots(c) };
+}
+
+async function useBot(c, name) {
+  const { bot, list } = await findBot(c, name);
   if (!bot) throw new Error(`bot "${name}" not found. Bots: ${list.map(b => b.name).join(', ')}`);
   if (!bot.active) {
     await c.evaluate(`document.querySelector('button[data-agent-id="${bot.id}"]').click()`);
@@ -120,7 +151,7 @@ async function main() {
     if (opt.bot) await useBot(c, opt.bot);
     switch (cmd) {
       case 'bots':
-        for (const b of await bots(c)) console.log(`${b.active ? '*' : ' '} ${b.name}`);
+        for (const b of await allBots(c)) console.log(`${b.active ? '*' : ' '} ${b.name}`);
         break;
       case 'use':
         console.log(`active: ${(await useBot(c, rest.join(' '))).name}`);
