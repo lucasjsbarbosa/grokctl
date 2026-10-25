@@ -3,7 +3,7 @@
 //   grokctl bots                     list bots (* = active)
 //   grokctl use <name>               switch to a bot
 //   grokctl create <name>            create a new bot
-//   grokctl ask [--bot <name>] [--no-wait] [--timeout <s>] [--file <path>] <message>
+//   grokctl ask [--bot <name>] [--no-wait] [--timeout <s>] [--file <path>] [--attach <path>]... <message>
 //   grokctl read [n]                 last n transcript messages (default 5)
 //   grokctl state                    busy/idle of the active bot
 //   grokctl eval <js>                raw JS in the renderer (debugging)
@@ -73,6 +73,15 @@ async function useBot(c, name) {
 }
 
 async function messages(c) { return c.evaluate(JS.messages); }
+
+// attach files through the composer's hidden <input type=file> (no file dialog involved)
+async function attach(c, files) {
+  const { root } = await c.send('DOM.getDocument', { depth: 0 }).then(r => r.result);
+  const { nodeId } = await c.send('DOM.querySelector', { nodeId: root.nodeId, selector: 'input[type="file"]' }).then(r => r.result);
+  if (!nodeId) throw new Error('file input not found');
+  await c.send('DOM.setFileInputFiles', { nodeId, files });
+  await sleep(2500);
+}
 
 async function send(c, text, waitS = 60) {
   // the composer is disabled while the bot is still answering: wait for it instead of failing
@@ -151,6 +160,7 @@ async function main() {
     else if (a === '--no-wait') opt.wait = false;
     else if (a === '--timeout') opt.timeout = Number(args.shift());
     else if (a === '--file') opt.file = args.shift();
+    else if (a === '--attach') (opt.attach = opt.attach || []).push(require('path').resolve(args.shift()));
     else rest.push(a);
   }
   const c = await connect();
@@ -180,6 +190,7 @@ async function main() {
         // --file: long messages (the Windows command line caps at ~32k chars); the text is appended after any inline message
         const text = [rest.join(' '), opt.file ? require('fs').readFileSync(opt.file, 'utf8') : ''].filter(Boolean).join('\n\n');
         if (!text) throw new Error('usage: grokctl ask [--bot name] [--file path] <message>');
+        if (opt.attach) await attach(c, opt.attach);
         await send(c, text);
         if (!opt.wait) { console.log('sent'); break; }
         const r = await waitReply(c, text, opt.timeout, opt.bot);

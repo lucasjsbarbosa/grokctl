@@ -56,6 +56,7 @@ grokctl ask "Summarize today's HN front page"          # send and wait for the r
 grokctl ask --bot "Research" --timeout 900 "..."       # target a bot, wait up to 15 min
 grokctl ask --bot "Research" --no-wait "..."           # fire and forget
 grokctl ask --bot "Research" --file notes.txt "Summarize this"   # long input from a file
+grokctl ask --bot "Research" --attach report.csv "Analyze it"    # attach files (repeat --attach)
 grokctl state                             # busy | idle
 grokctl read 5                            # last 5 transcript messages
 grokctl eval 'document.title'             # raw JS in the app (debugging)
@@ -67,7 +68,7 @@ grokctl eval 'document.title'             # raw JS in the app (debugging)
 
 If Node is not on the Windows `PATH` (for example a portable install), point the WSL launcher at it with `GROKCTL_NODE=/mnt/c/Users/<you>/tools/node/node.exe`.
 
-Windows caps a command line at about 32,000 characters, so pass long inputs with `--file`. From WSL, give the file as a Windows path (`wslpath -w file.txt`) or keep it under the repo folder.
+Windows caps a command line at about 32,000 characters, so pass long inputs with `--file`. Very long text (around 150k characters) leaves the Send button disabled; attach it as a file with `--attach` instead. From WSL, give the file as a Windows path (`wslpath -w file.txt`) or keep it under the repo folder.
 
 Set `GROKCTL_PORT` to use a port other than `9333`, and pass the same `-Port` to `start-grok-bot.ps1`.
 
