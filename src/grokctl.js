@@ -18,8 +18,10 @@ const JS = {
   // innerText is empty while the window is minimized, so fall back to textContent
   messages: `[...document.querySelectorAll(".sand-message[data-role]")].map(m => ({
     role: m.dataset.role, text: (m.innerText || m.textContent).trim() }))`,
+  // only the active bot counts: the sidebar shows a state mark for every bot
   busy: `(() => {
-    const states = [...document.querySelectorAll("[data-grok-state]")].map(e => e.dataset.grokState);
+    const active = document.querySelector('button[data-agent-id][data-active="true"]');
+    const states = [...(active ? active.querySelectorAll("[data-grok-state]") : [])].map(e => e.dataset.grokState);
     const stop = [...document.querySelectorAll("button")].some(b => /^(Stop|Parar|Interromper|Detener)/i.test(b.getAttribute("aria-label") || ""));
     return stop || states.some(s => s && !["idle", "finished"].includes(s));
   })()`,
@@ -30,7 +32,7 @@ async function bots(c) { return c.evaluate(JS.bots); }
 // The sidebar only renders the bots near the visible area, so scroll through it to see them all.
 const SCROLL = pos => `(() => { const b = document.querySelector("button[data-agent-id]");
   const v = b && b.closest(".ui-scroll-area__viewport"); if (!v) return false;
-  ${pos === 'top' ? 'v.scrollTop = 0' : 'v.scrollTop += v.clientHeight * 0.8'};
+  ${pos === 'top' ? 'v.scrollTop = 0' : 'v.scrollTop += v.clientHeight * 0.4'};
   return v.scrollTop + v.clientHeight < v.scrollHeight - 2; })()`;
 
 async function allBots(c) {
@@ -72,7 +74,7 @@ async function useBot(c, name) {
 
 async function messages(c) { return c.evaluate(JS.messages); }
 
-async function send(c, text, waitS = 180) {
+async function send(c, text, waitS = 60) {
   // the composer is disabled while the bot is still answering: wait for it instead of failing
   for (const end = Date.now() + waitS * 1000; Date.now() < end && (await c.evaluate(JS.busy)); ) await sleep(2000);
   const ok = await c.evaluate(`(() => { const f = document.querySelector(".sand-prompt-field"); if (!f) return false; f.focus(); return true; })()`);
