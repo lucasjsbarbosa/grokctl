@@ -115,11 +115,13 @@ async function createBot(c, name) {
   await sleep(1500);
 }
 
-async function waitReply(c, sent, timeoutS) {
+async function waitReply(c, sent, timeoutS, bot) {
   const deadline = Date.now() + timeoutS * 1000;
   let last = '', stableSince = 0;
   while (Date.now() < deadline) {
     await sleep(1500);
+    // another grokctl process may have switched the active bot meanwhile
+    if (bot) await useBot(c, bot);
     const fresh = after(await messages(c), sent);
     const busy = await c.evaluate(JS.busy);
     const snapshot = JSON.stringify(fresh);
@@ -174,7 +176,7 @@ async function main() {
         if (!text) throw new Error('usage: grokctl ask [--bot name] <message>');
         await send(c, text);
         if (!opt.wait) { console.log('sent'); break; }
-        const r = await waitReply(c, text, opt.timeout);
+        const r = await waitReply(c, text, opt.timeout, opt.bot);
         if (r.timeout) { console.log(`(timeout after ${opt.timeout}s — bot still working; use "grokctl read")\n` + fmt(r.partial)); process.exitCode = 2; }
         else console.log(fmt(r));
         break;
