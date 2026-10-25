@@ -55,6 +55,7 @@ grokctl create "Research"                 # create a new bot
 grokctl ask "Summarize today's HN front page"          # send and wait for the reply
 grokctl ask --bot "Research" --timeout 900 "..."       # target a bot, wait up to 15 min
 grokctl ask --bot "Research" --no-wait "..."           # fire and forget
+grokctl ask --bot "Research" --file notes.txt "Summarize this"   # long input from a file
 grokctl state                             # busy | idle
 grokctl read 5                            # last 5 transcript messages
 grokctl eval 'document.title'             # raw JS in the app (debugging)
@@ -65,6 +66,8 @@ grokctl eval 'document.title'             # raw JS in the app (debugging)
 `ask` finds the reply by anchoring on the message it just sent, so it keeps working when the transcript only renders the last few messages and while the Grok Bot window is minimized.
 
 If Node is not on the Windows `PATH` (for example a portable install), point the WSL launcher at it with `GROKCTL_NODE=/mnt/c/Users/<you>/tools/node/node.exe`.
+
+Windows caps a command line at about 32,000 characters, so pass long inputs with `--file`. From WSL, give the file as a Windows path (`wslpath -w file.txt`) or keep it under the repo folder.
 
 Set `GROKCTL_PORT` to use a port other than `9333`, and pass the same `-Port` to `start-grok-bot.ps1`.
 

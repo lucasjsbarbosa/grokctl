@@ -3,7 +3,7 @@
 //   grokctl bots                     list bots (* = active)
 //   grokctl use <name>               switch to a bot
 //   grokctl create <name>            create a new bot
-//   grokctl ask [--bot <name>] [--no-wait] [--timeout <s>] <message>
+//   grokctl ask [--bot <name>] [--no-wait] [--timeout <s>] [--file <path>] <message>
 //   grokctl read [n]                 last n transcript messages (default 5)
 //   grokctl state                    busy/idle of the active bot
 //   grokctl eval <js>                raw JS in the renderer (debugging)
@@ -146,6 +146,7 @@ async function main() {
     if (a === '--bot') opt.bot = args.shift();
     else if (a === '--no-wait') opt.wait = false;
     else if (a === '--timeout') opt.timeout = Number(args.shift());
+    else if (a === '--file') opt.file = args.shift();
     else rest.push(a);
   }
   const c = await connect();
@@ -172,8 +173,9 @@ async function main() {
         break;
       }
       case 'ask': {
-        const text = rest.join(' ');
-        if (!text) throw new Error('usage: grokctl ask [--bot name] <message>');
+        // --file: long messages (the Windows command line caps at ~32k chars); the text is appended after any inline message
+        const text = [rest.join(' '), opt.file ? require('fs').readFileSync(opt.file, 'utf8') : ''].filter(Boolean).join('\n\n');
+        if (!text) throw new Error('usage: grokctl ask [--bot name] [--file path] <message>');
         await send(c, text);
         if (!opt.wait) { console.log('sent'); break; }
         const r = await waitReply(c, text, opt.timeout, opt.bot);
@@ -187,7 +189,7 @@ async function main() {
         break;
       }
       default:
-        console.log('usage: grokctl bots | use <name> | create <name> | ask [--bot name] [--no-wait] [--timeout s] <msg> | read [n] | state | eval <js>');
+        console.log('usage: grokctl bots | use <name> | create <name> | ask [--bot name] [--no-wait] [--timeout s] [--file path] <msg> | read [n] | state | eval <js>');
     }
   } finally {
     c.close();
